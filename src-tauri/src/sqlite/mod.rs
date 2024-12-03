@@ -1,5 +1,6 @@
 use crate::models::codex::{Codex, ParseError};
 use crate::models::ClaudeDesktopConfig;
+use std::borrow::Cow;
 use std::fmt::Write;
 use std::path::Path;
 use yaml_rust::{Yaml, YamlLoader};
@@ -9,7 +10,7 @@ const CLAUDE_CONFIG_PATH: &str =
     "~/Library/Application Support/Claude/claude_desktop_config.json";
 
 #[cfg(target_os = "windows")]
-const CLAUDE_CONFIG_PATH: &str = "";
+const CLAUDE_CONFIG_PATH: &str = "$APPDATA\\Claude\\claude_desktop_config.json";
 
 pub fn create_tables(
     decompressed_path: &Path,
@@ -155,7 +156,7 @@ fn extract_string_array(yaml: &Yaml, field: &'static str) -> Vec<String> {
 }
 
 fn create_config_file() -> anyhow::Result<()> {
-    let full_config_path = shellexpand::tilde(CLAUDE_CONFIG_PATH);
+    let full_config_path = get_claude_mcp_config_path();
     let config_path = Path::new(full_config_path.as_ref());
 
     if !config_path.exists() {
@@ -185,4 +186,14 @@ fn load_into_db(codices: Vec<Codex>, connection: &sqlite::Connection) -> anyhow:
     connection.execute(&query)?;
 
     Ok(())
+}
+
+#[cfg(target_os = "macos")]
+fn get_claude_mcp_config_path() -> Cow<'static, str> {
+    shellexpand::tilde(CLAUDE_CONFIG_PATH)
+}
+
+#[cfg(target_os = "windows")]
+fn get_claude_mcp_config_path() -> Cow<'static, str> {
+    shellexpand::env(CLAUDE_CONFIG_PATH).unwrap_or_default()
 }

@@ -21,8 +21,9 @@ fn load(bytes: Vec<u8>) -> String {
             let result = create_tables(decompressed_path, db_path)
                 .and_then(|conn| load_codices(decompressed_path, &conn))
                 .and_then(|_| {
-                    Command::new("open")
-                        .arg("/Applications/Claude.app")
+                    let (cmd, args) = get_cmd_and_executable_path();
+                    Command::new(cmd)
+                        .args(args.as_slice())
                         .spawn()
                         .map_err(anyhow::Error::new)
                 });
@@ -39,14 +40,28 @@ fn load(bytes: Vec<u8>) -> String {
 
 #[tauri::command]
 fn launch() -> String {
-    match Command::new("open")
-        .arg("/Applications/Claude.app")
+    let (cmd, args) = get_cmd_and_executable_path();
+    match Command::new(cmd)
+        .args(args.as_slice())
         .spawn() {
         Ok(_) => {
             "Successfully launched Claude Desktop!".into()
         }
         Err(e) => e.to_string()
     }
+}
+
+#[cfg(target_os = "macos")]
+fn get_cmd_and_executable_path() -> (String, Vec<String>) {
+    ("open".into(), vec!["/Applications/Claude.app".into()])
+}
+
+#[cfg(target_os = "windows")]
+fn get_cmd_and_executable_path() -> (String, Vec<String>) {
+    let executable_path = shellexpand::env("$LOCALAPPDATA\\AnthropicClaude\\claude.exe")
+        .unwrap_or_default()
+        .to_string();
+    ("cmd".into(), vec!["/c".into(), "start".into(), executable_path])
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
