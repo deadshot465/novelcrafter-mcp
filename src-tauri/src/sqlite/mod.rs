@@ -4,8 +4,12 @@ use std::fmt::Write;
 use std::path::Path;
 use yaml_rust::{Yaml, YamlLoader};
 
-const CLAUDE_CONFIG_PATH_MACOS: &str =
+#[cfg(target_os = "macos")]
+const CLAUDE_CONFIG_PATH: &str =
     "~/Library/Application Support/Claude/claude_desktop_config.json";
+
+#[cfg(target_os = "windows")]
+const CLAUDE_CONFIG_PATH: &str = "";
 
 pub fn create_tables(
     decompressed_path: &Path,
@@ -151,7 +155,7 @@ fn extract_string_array(yaml: &Yaml, field: &'static str) -> Vec<String> {
 }
 
 fn create_config_file() -> anyhow::Result<()> {
-    let full_config_path = shellexpand::tilde(CLAUDE_CONFIG_PATH_MACOS);
+    let full_config_path = shellexpand::tilde(CLAUDE_CONFIG_PATH);
     let config_path = Path::new(full_config_path.as_ref());
 
     if !config_path.exists() {
